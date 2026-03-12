@@ -1,36 +1,36 @@
 /**
- * WhatsApp Sync Viewer
+ * WhatsApp Sync Viewer — Standalone CLI Tool
  *
- * A local CLI tool that connects to WhatsApp, syncs recent history,
- * and displays the 10 most recent messages across all chats.
+ * Connects to WhatsApp, syncs recent history, displays the 10 most recent
+ * messages, and provides an interactive shell to send messages.
  *
  * Usage:
- *   npx tsx tools/wa-sync-viewer.ts                  # QR code pairing
- *   npx tsx tools/wa-sync-viewer.ts --pairing-code   # Phone number pairing code
- *   npx tsx tools/wa-sync-viewer.ts --send <jid> <message>  # Send a message
+ *   npm start                                        # QR code pairing
+ *   npm run start:pairing                            # Phone number pairing code
+ *   npx tsx index.ts --send <jid> <message>          # Send a message
  *
- * On first run, scan the QR code with WhatsApp (or use pairing code).
- * Session is saved to ./wa-sync-session/ for future runs.
+ * First run: scan the QR code with WhatsApp > Linked Devices > Link a Device.
+ * Session is saved to ./session/ for future runs (no re-scan needed).
  */
 
 import { Boom } from '@hapi/boom'
 import makeWASocket, {
-  CacheStore,
+  type CacheStore,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   proto,
   useMultiFileAuthState,
-  WAMessage,
-  WAMessageKey,
-} from '../src'
+  type WAMessage,
+  type WAMessageKey,
+} from 'baileys'
 import NodeCache from '@cacheable/node-cache'
 import P from 'pino'
 import qrcode from 'qrcode-terminal'
 import readline from 'readline'
 
 // ── Config ──────────────────────────────────────────────────
-const SESSION_DIR = './wa-sync-session'
+const SESSION_DIR = './session'
 const MAX_DISPLAY_MESSAGES = 10
 const HISTORY_WAIT_MS = 15_000 // wait for history sync after connection
 
@@ -62,14 +62,12 @@ function getContactName(jid: string): string {
   if (c?.notify) return c.notify
   const chat = chats.get(jid)
   if (chat?.name) return chat.name
-  // strip @s.whatsapp.net / @g.us
   return jid.replace(/@.*/, '')
 }
 
 function formatTimestamp(ts: number | Long | null | undefined): string {
   if (!ts) return '???'
   const n = typeof ts === 'number' ? ts : Number(ts)
-  // WhatsApp timestamps are in seconds
   const d = new Date(n * 1000)
   return d.toLocaleString()
 }
@@ -90,13 +88,11 @@ function extractText(msg: WAMessage): string {
   if (m.pollCreationMessage) return `[Poll] ${m.pollCreationMessage.name || ''}`
   if (m.editedMessage) return '[Edited Message]'
   if (m.protocolMessage) return '[System Message]'
-  // fallback: show first key
   const keys = Object.keys(m)
   return `[${keys[0] || 'unknown'}]`
 }
 
 function displayRecentMessages() {
-  // Sort all messages by timestamp descending, take top N
   const sorted = messages
     .filter(m => m.message && !m.message.protocolMessage && !m.message.senderKeyDistributionMessage)
     .sort((a, b) => {
@@ -158,17 +154,16 @@ async function main() {
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
     msgRetryCounterCache,
-    syncFullHistory: false, // only recent history for quick view
+    syncFullHistory: false,
     generateHighQualityLinkPreview: false,
     markOnlineOnConnect: true,
     shouldSyncHistoryMessage: (msg) => {
-      // Accept INITIAL_BOOTSTRAP, RECENT, and PUSH_NAME for quick sync
-      const dominated = [
+      const accepted = [
         proto.HistorySync.HistorySyncType.INITIAL_BOOTSTRAP,
         proto.HistorySync.HistorySyncType.RECENT,
         proto.HistorySync.HistorySyncType.PUSH_NAME,
       ]
-      return dominated.includes(msg.syncType!)
+      return accepted.includes(msg.syncType!)
     },
     getMessage: async (key: WAMessageKey) => {
       const found = messages.find(
@@ -218,7 +213,6 @@ async function main() {
         } else {
           console.error('Usage: --send <jid> <message text>')
         }
-        // wait briefly then exit
         setTimeout(() => process.exit(0), 3000)
         return
       }
@@ -236,7 +230,7 @@ async function main() {
         console.log('Disconnected. Reconnecting...')
         main()
       } else {
-        console.log('Logged out. Delete wa-sync-session/ and restart to re-pair.')
+        console.log('Logged out. Delete session/ directory and restart to re-pair.')
         process.exit(1)
       }
     }
