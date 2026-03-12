@@ -4,14 +4,14 @@
   "description": "CLI tool to connect to WhatsApp, sync recent history, view messages, and send messages",
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts",
-    "start:pairing": "tsx src/index.ts --pairing-code",
-    "send": "tsx src/index.ts --send"
+    "start": "npx tsx src/index.ts",
+    "start:pairing": "npx tsx src/index.ts --pairing-code",
+    "send": "npx tsx src/index.ts --send"
   },
   "dependencies": {
-    "@cacheable/node-cache": "^5.0.2",
     "@hapi/boom": "^10.0.1",
     "baileys": "^7.0.0-rc.9",
+    "node-cache": "^5.1.2",
     "pino": "^9.6.0",
     "qrcode-terminal": "^0.12.0"
   },

@@ -24,7 +24,7 @@ import makeWASocket, {
   type WAMessage,
   type WAMessageKey,
 } from 'baileys'
-import NodeCache from '@cacheable/node-cache'
+import NodeCache from 'node-cache'
 import P from 'pino'
 import qrcode from 'qrcode-terminal'
 import readline from 'readline'
